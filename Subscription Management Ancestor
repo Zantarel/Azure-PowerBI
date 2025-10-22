@@ -1,0 +1,10 @@
+let
+  Source = AzureResourceGraph.Query("ResourceContainers | where type == 'microsoft.resources/subscriptions'", null, null, null, [resultTruncated = true]),
+  #"Transform columns" = Table.TransformColumnTypes(Source, {{"id", type text}, {"name", type text}, {"type", type text}, {"tenantId", type text}, {"kind", type text}, {"location", type text}, {"resourceGroup", type text}, {"subscriptionId", type text}, {"managedBy", type text}, {"sku", type any}, {"plan", type any}, {"properties", type any}, {"tags", type any}, {"identity", type any}, {"zones", type any}, {"extendedLocation", type any}}),
+  #"Removed other columns" = Table.SelectColumns(#"Transform columns", {"name", "subscriptionId", "properties"}),
+  #"Expanded properties" = Table.ExpandRecordColumn(#"Removed other columns", "properties", {"managementGroupAncestorsChain", "subscriptionPolicies", "managedByTenants", "state"}, {"properties.managementGroupAncestorsChain", "properties.subscriptionPolicies", "properties.managedByTenants", "properties.state"}),
+  #"Removed columns" = Table.RemoveColumns(#"Expanded properties", {"properties.subscriptionPolicies", "properties.managedByTenants", "properties.state"}),
+  #"Expanded properties.managementGroupAncestorsChain" = Table.ExpandListColumn(#"Removed columns", "properties.managementGroupAncestorsChain"),
+  #"Expanded properties.managementGroupAncestorsChain 1" = Table.ExpandRecordColumn(#"Expanded properties.managementGroupAncestorsChain", "properties.managementGroupAncestorsChain", {"displayName", "name"}, {"properties.managementGroupAncestorsChain.displayName", "properties.managementGroupAncestorsChain.name"})
+in
+  #"Expanded properties.managementGroupAncestorsChain 1"
