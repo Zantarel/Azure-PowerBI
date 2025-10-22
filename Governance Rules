@@ -1,3 +1,7 @@
+//////////////////////////////
+// Governance Rules 
+//////////////////////////////
+
 let
   Source = AzureResourceGraph.Query("securityresources | where type == 'microsoft.security/governancerules' | project id, name, type, tenantId, resourceGroup, subscriptionId, properties", "Tenant", null, null, [resultTruncated = true]),
   #"isempty" = if Table.HasColumns(Source, "Results") then #table({"id", "name", "type", "tenantId", "resourceGroup", "subscriptionId", "properties"}, {}) else Source,
@@ -5,3 +9,15 @@ let
     #"Expanded ownerSource" = Table.ExpandRecordColumn(#"Expanded properties", "ownerSource", {"type", "value"}, {"ownerType", "owner"})
 in
     #"Expanded ownerSource"
+
+//////////////////////////////
+// Governance Assignment Assessment Status 
+//////////////////////////////
+
+
+let
+  Source = AzureResourceGraph.Query("securityresources
+| where type == ""microsoft.security/assessments"" and isnull(properties.resourceDetails.AwsResourceId) and isnull(properties.resourceDetails.GcpResourceId) and isnotempty(properties.displayName) | project id, statusCode = tostring(properties.status.code) | join kind=leftouter (securityresources | where type == ""microsoft.security/assessments/governanceassignments"" | project id = tostring(properties.assignedResourceId),remediationDueDate = bin(todatetime(properties.remediationDueDate), 1d)) on id | extend assignmentStatus = case(statusCode != ""Unhealthy"", ""Completed"", isnull(remediationDueDate), ""Unassigned"", remediationDueDate < bin(now(), 1d), ""Overdue"",""Ontime"")", "Tenant", null, null, [resultTruncated = true]),
+  #"isempty" = if Table.HasColumns(Source, "Results") then #table({"id", "statusCode", "id1", "remediationDueDate", "assignmentStatus"}, {}) else Source
+in
+    isempty
