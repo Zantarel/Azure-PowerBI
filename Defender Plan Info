@@ -1,0 +1,9 @@
+let
+  Source = AzureResourceGraph.Query("securityresources#(lf)| where type == ""microsoft.security/pricings""#(lf)| where name in~(""CloudPosture"", ""VirtualMachines"", ""SqlServerVirtualMachines"", ""SqlServers"", ""Containers"", ""StorageAccounts"")#(lf)| mv-expand extensions = properties.extensions#(lf)| extend pricingTier = properties.pricingTier, subPlan = properties.subPlan", "Tenant", null, null, [resultTruncated = false]),
+  #"Removed columns" = Table.RemoveColumns(Source, {"kind", "location", "resourceGroup", "managedBy", "sku", "plan", "properties", "tags", "identity", "zones", "extendedLocation"}),
+  #"Expanded extensions" = Table.ExpandRecordColumn(#"Removed columns", "extensions", {"name", "isEnabled", "additionalExtensionProperties"}, {"extensions.name", "extensions.isEnabled", "extensions.additionalExtensionProperties"}),
+  #"Removed columns 1" = Table.RemoveColumns(#"Expanded extensions", {"extensions.additionalExtensionProperties"}),
+  #"Transform columns" = Table.TransformColumnTypes(#"Removed columns 1", {{"id", type text}, {"name", type text}, {"type", type text}, {"tenantId", type text}, {"subscriptionId", type text}, {"extensions.name", type text}, {"extensions.isEnabled", type text}, {"pricingTier", type text}, {"subPlan", type text}}),
+  #"Replace errors" = Table.ReplaceErrorValues(#"Transform columns", {{"id", null}, {"name", null}, {"type", null}, {"tenantId", null}, {"subscriptionId", null}, {"extensions.name", null}, {"extensions.isEnabled", null}, {"pricingTier", null}, {"subPlan", null}})
+in
+  #"Replace errors"
