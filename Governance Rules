@@ -1,0 +1,7 @@
+let
+  Source = AzureResourceGraph.Query("securityresources | where type == 'microsoft.security/governancerules' | project id, name, type, tenantId, resourceGroup, subscriptionId, properties", "Tenant", null, null, [resultTruncated = true]),
+  #"isempty" = if Table.HasColumns(Source, "Results") then #table({"id", "name", "type", "tenantId", "resourceGroup", "subscriptionId", "properties"}, {}) else Source,
+    #"Expanded properties" = Table.ExpandRecordColumn(isempty, "properties", {"displayName", "isGracePeriod", "remediationTimeframe", "includeMemberScopes", "sourceResourceType", "conditionSets", "rulePriority", "ownerSource", "isDisabled", "ruleType"}, {"displayName","isGracePeriod", "remediationTimeframe", "includeMemberScopes", "sourceResourceType", "ruleConditionSet", "rulePriority", "ownerSource", "isDisabled", "ruleType"}),
+    #"Expanded ownerSource" = Table.ExpandRecordColumn(#"Expanded properties", "ownerSource", {"type", "value"}, {"ownerType", "owner"})
+in
+    #"Expanded ownerSource"
