@@ -1,0 +1,43 @@
+//////////////////////////////
+// Secure Scores  (by subscription)
+//////////////////////////////
+
+let
+  Source = AzureResourceGraph.Query("SecurityResources | where type == 'microsoft.security/securescores'", null, null, null, [resultTruncated = true]),
+  #"Transform columns" = Table.TransformColumnTypes(Source, {{"id", type text}, {"name", type text}, {"type", type text}, {"tenantId", type text}, {"kind", type text}, {"location", type text}, {"resourceGroup", type text}, {"subscriptionId", type text}, {"managedBy", type text}, {"sku", type any}, {"plan", type any}, {"properties", type any}, {"tags", type any}, {"identity", type any}, {"zones", type any}, {"extendedLocation", type any}}),
+  #"Removed columns" = Table.RemoveColumns(#"Transform columns", {"tags", "identity", "zones", "extendedLocation", "plan", "sku"}),
+  #"Expanded properties" = Table.ExpandRecordColumn(#"Removed columns", "properties", {"displayName", "environment", "weight", "score"}, {"properties.displayName", "properties.environment", "properties.weight", "properties.score"}),
+  #"Expanded properties.score" = Table.ExpandRecordColumn(#"Expanded properties", "properties.score", {"percentage", "current", "max"}, {"properties.score.percentage", "properties.score.current", "properties.score.max"}),
+  #"Transform columns 1" = Table.TransformColumnTypes(#"Expanded properties.score", {{"properties.displayName", type text}, {"properties.environment", type text}, {"properties.weight", type text}, {"properties.score.percentage", type text}, {"properties.score.current", type text}, {"properties.score.max", type text}}),
+  #"Replace errors" = Table.ReplaceErrorValues(#"Transform columns 1", {{"properties.displayName", null}, {"properties.environment", null}, {"properties.weight", null}, {"properties.score.percentage", null}, {"properties.score.current", null}, {"properties.score.max", null}})
+in
+  #"Replace errors"
+
+//////////////////////////////
+// Secure Scores Controls  
+//////////////////////////////
+
+let
+  Source = AzureResourceGraph.Query("SecurityResources | where type == 'microsoft.security/securescores/securescorecontrols'", null, null, null, [resultTruncated = true]),
+  #"Transform columns" = Table.TransformColumnTypes(Source, {{"id", type text}, {"name", type text}, {"type", type text}, {"tenantId", type text}, {"kind", type text}, {"location", type text}, {"resourceGroup", type text}, {"subscriptionId", type text}, {"managedBy", type text}, {"sku", type any}, {"plan", type any}, {"properties", type any}, {"tags", type any}, {"identity", type any}, {"zones", type any}, {"extendedLocation", type any}}),
+  #"Removed columns" = Table.RemoveColumns(#"Transform columns", {"tenantId", "type", "plan", "sku", "tags", "identity", "zones", "extendedLocation"}),
+  #"Expanded properties" = Table.ExpandRecordColumn(#"Removed columns", "properties", {"displayName", "notApplicableResourceCount", "unhealthyResourceCount", "healthyResourceCount", "environment", "definition", "scoreName", "weight", "score"}, {"properties.displayName", "properties.notApplicableResourceCount", "properties.unhealthyResourceCount", "properties.healthyResourceCount", "properties.environment", "properties.definition", "properties.scoreName", "properties.weight", "properties.score"}),
+  #"Expanded properties.score" = Table.ExpandRecordColumn(#"Expanded properties", "properties.score", {"percentage", "current", "max"}, {"properties.score.percentage", "properties.score.current", "properties.score.max"}),
+  #"Expanded properties.definition" = Table.ExpandRecordColumn(#"Expanded properties.score", "properties.definition", {"id", "name", "properties", "type"}, {"properties.definition.id", "properties.definition.name", "properties.definition.properties", "properties.definition.type"}),
+  #"Expanded properties.definition.properties" = Table.ExpandRecordColumn(#"Expanded properties.definition", "properties.definition.properties", {"displayName", "source", "assessmentDefinitions", "maxScore"}, {"properties.definition.properties.displayName", "properties.definition.properties.source", "properties.definition.properties.assessmentDefinitions", "properties.definition.properties.maxScore"}),
+  #"Removed columns 1" = Table.RemoveColumns(#"Expanded properties.definition.properties", {"properties.definition.properties.assessmentDefinitions", "properties.definition.properties.source"}),
+  #"Transform columns 1" = Table.TransformColumnTypes(#"Removed columns 1", {{"properties.displayName", type text}, {"properties.notApplicableResourceCount", type text}, {"properties.unhealthyResourceCount", type text}, {"properties.healthyResourceCount", type text}, {"properties.environment", type text}, {"properties.definition.id", type text}, {"properties.definition.name", type text}, {"properties.definition.properties.displayName", type text}, {"properties.definition.properties.maxScore", type text}, {"properties.definition.type", type text}, {"properties.scoreName", type text}, {"properties.weight", type text}, {"properties.score.percentage", type text}, {"properties.score.current", type text}, {"properties.score.max", type text}}),
+  #"Replace errors" = Table.ReplaceErrorValues(#"Transform columns 1", {{"properties.displayName", null}, {"properties.notApplicableResourceCount", null}, {"properties.unhealthyResourceCount", null}, {"properties.healthyResourceCount", null}, {"properties.environment", null}, {"properties.definition.id", null}, {"properties.definition.name", null}, {"properties.definition.properties.displayName", null}, {"properties.definition.properties.maxScore", null}, {"properties.definition.type", null}, {"properties.scoreName", null}, {"properties.weight", null}, {"properties.score.percentage", null}, {"properties.score.current", null}, {"properties.score.max", null}})
+in
+  #"Replace errors"
+
+//////////////////////////////
+// Secure Assessment Metadata  
+//////////////////////////////
+
+let
+  Source = AzureResourceGraph.Query("securityresources#(cr)#(lf)    | where type == 'microsoft.security/assessments'#(cr)#(lf)    | extend assessment_name = tostring(properties.displayName) //assessment name#(cr)#(lf)    | extend metadata = properties.metadata#(cr)#(lf)    | extend severity = tostring(metadata.severity)#(cr)#(lf)    | extend securityCategories = tostring(metadata.securityCategories)#(cr)#(lf)    | extend category = tostring(metadata.categories)#(cr)#(lf)    | extend implementationEffort = tostring(metadata.implentationEffort)#(cr)#(lf)    | extend securityIssue = tostring(metadata.securityIssue)#(cr)#(lf)    | extend techniques = tostring(metadata.techniques), tactics = tostring(metadata.tactics), threats = tostring(metadata.threats)#(cr)#(lf)    | summarize count() by assessment_name, severity, securityCategories, category, implementationEffort, securityIssue, techniques, tactics, threats", null, null, null, [resultTruncated = true]),
+  #"Transform columns" = Table.TransformColumnTypes(Source, {{"assessment_name", type text}, {"severity", type text}, {"securityCategories", type text}, {"category", type text}, {"implementationEffort", type text}, {"securityIssue", type text}, {"techniques", type text}, {"tactics", type text}, {"threats", type text}, {"count_", type text}}),
+  #"Replace errors" = Table.ReplaceErrorValues(#"Transform columns", {{"assessment_name", null}, {"severity", null}, {"securityCategories", null}, {"category", null}, {"implementationEffort", null}, {"securityIssue", null}, {"techniques", null}, {"tactics", null}, {"threats", null}, {"count_", null}})
+in
+  #"Replace errors"

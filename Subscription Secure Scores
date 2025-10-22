@@ -1,7 +1,0 @@
-let
-  Source = AzureResourceGraph.Query("securityresources#(lf)| where type == ""microsoft.security/securescores"" and tostring(properties.displayName) != ""Score grace excluded""#(lf)| extend secScore = round(properties.score.percentage * 100.0,0)#(lf)| extend env = tostring(properties.environment)#(lf)| join kind=inner (resourcecontainers | where type == ""microsoft.resources/subscriptions"" | project subscriptionId, subscriptionName = name) on subscriptionId#(lf)| project subscriptionId, subscriptionName, secureScore = secScore", "Tenant", null, null, [resultTruncated = false]),
-  #"Transform columns" = Table.TransformColumnTypes(Source, {{"subscriptionId", type text}, {"subscriptionName", type text}, {"secureScore", type text}}),
-  #"Replace errors" = Table.ReplaceErrorValues(#"Transform columns", {{"subscriptionId", null}, {"subscriptionName", null}, {"secureScore", null}}),
-    #"Changed Type" = Table.TransformColumnTypes(#"Replace errors",{{"secureScore", Int64.Type}})
-in
-  #"Changed Type"
