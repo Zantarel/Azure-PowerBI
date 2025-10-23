@@ -1,11 +1,11 @@
 let
   Source = AzureResourceGraph.Query("ResourceContainers | where type == 'microsoft.resources/subscriptions'", null, null, null, [resultTruncated = true]),
-  #"Transform columns" = Table.TransformColumnTypes(Source, {{"id", type text}, {"name", type text}, {"type", type text}, {"tenantId", type text}, {"kind", type any}, {"location", type any}, {"resourceGroup", type any}, {"subscriptionId", type text}, {"managedBy", type any}, {"sku", type any}, {"plan", type any}, {"properties", type any}, {"tags", type any}, {"identity", type any}, {"zones", type any}, {"extendedLocation", type any}}),
+  #"isempty" = if Table.HasColumns(Source, "Results") then #table({"id", "name", "type", "tenantId", "kind", "location", "resourceGroup", "subscriptionId", "managedBy", "sku", "plan", "properties", "tags", "identity", "zones", "extendedLocation"}, {}) else Source,
+  #"Transform columns" = Table.TransformColumnTypes(#"isempty", {{"id", type text}, {"name", type text}, {"type", type text}, {"tenantId", type text}, {"kind", type any}, {"location", type any}, {"resourceGroup", type any}, {"subscriptionId", type text}, {"managedBy", type any}, {"sku", type any}, {"plan", type any}, {"properties", type any}, {"tags", type any}, {"identity", type any}, {"zones", type any}, {"extendedLocation", type any}}),
   #"Transform columns 1" = Table.TransformColumnTypes(#"Transform columns", {{"kind", type text}, {"location", type text}, {"resourceGroup", type text}, {"managedBy", type text}, {"sku", type text}, {"plan", type text}, {"identity", type text}, {"zones", type text}, {"extendedLocation", type text}}),
   #"Removed columns 1" = Table.RemoveColumns(#"Transform columns 1", {"zones", "extendedLocation", "sku", "plan", "identity"}),
-  //  #"Expanded tags" = Table.ExpandRecordColumn(#"Removed columns 1", "tags", {"Owner", "Cost Centre", "Approver", "BusinessUnit"}, {"tags.Owner", "tags.Cost Centre", "tags.Approver", "tags.BusinessUnit"}),
-    #"Removed Columns" = Table.RemoveColumns(#"Expanded tags",{"properties", "managedBy", "kind", "location", "resourceGroup", "type"})
+    #"Removed Columns" = Table.RemoveColumns(#"Removed columns 1",{"properties", "managedBy", "kind", "location", "resourceGroup", "type", "tags"})
 in
-  #"Removed Columns"
+    #"Removed Columns"
 
 //Note: sometimes filter out the expanded tags and did a separate table for the tags, incase multiple tags of a certain category were added by stupid users.
